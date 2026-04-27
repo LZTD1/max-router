@@ -9,7 +9,7 @@
 ## Установка
 
 ```bash
-go get github.com/LZTD1/max-router@v1.0.1
+go get github.com/LZTD1/max-router@v1.1.0
 ```
 
 ## Возможности (Features)
