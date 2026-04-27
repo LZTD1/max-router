@@ -2,14 +2,14 @@
 
 ![max-router-funny-pic](https://i.imgur.com/IVlsf8E.png)
 
-Гибкий и мощный роутер для [Max Bot API Client@v1.6.14](https://github.com/max-messenger/max-bot-api-client-go), вдохновленный принципами `go-chi`.
+Гибкий и мощный роутер для [Max Bot API Client@v1.6.15](https://github.com/max-messenger/max-bot-api-client-go), вдохновленный принципами `go-chi`.
 
 Роутер предоставляет удобный интерфейс для обработки сообщений, команд и callback-запросов, поддерживая middleware и группировку маршрутов.
 
 ## Установка
 
 ```bash
-go get github.com/LZTD1/max-router@v1.1.0
+go get github.com/LZTD1/max-router@v1.1.1
 ```
 
 ## Возможности (Features)
@@ -42,7 +42,10 @@ func main() {
     r.HandleCommand("/start", func(ctx maxrouter.Context) error {
         return ctx.Send("Привет!")
     })
-    
+    r.HandleText("Кто ты?", func(ctx maxrouter.Context) error {
+        return ctx.Reply("Я бот!")
+    })
+	
     // --- Обработка неизвестных команд (NotFound) ---
     r.NotFound(func(c maxrouter.Context) error {
         return c.Send("Извините, такую команду я еще не умею обрабатывать")
@@ -53,7 +56,9 @@ func main() {
         r.Handle(update, ctx)
     }
 }
-```
+``` 
+Для корректной работы роутера рекомендуется использование встроенных в контекст методов `Send`, `Reply` и т.д. Использование std API внутри роутера может привести к некорректной работе.
+
 ## Примеры
 
 Все примеры предоставлены в директории `_examples`:

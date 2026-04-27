@@ -2,7 +2,7 @@ module github.com/LZTD1/max-router
 
 go 1.25
 
-require github.com/max-messenger/max-bot-api-client-go v1.6.14
+require github.com/max-messenger/max-bot-api-client-go v1.6.15
 
 require (
 	github.com/json-iterator/go v1.1.12 // indirect
