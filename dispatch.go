@@ -6,13 +6,13 @@ import (
 	"github.com/max-messenger/max-bot-api-client-go/schemes"
 )
 
-func (r *Router) Handle(upd schemes.UpdateInterface) {
+func (r *Router) Handle(upd schemes.UpdateInterface, ctx context.Context) {
 	if r.isAsync {
 		go func() {
-			_ = r.HandleCtx(context.Background(), upd)
+			_ = r.HandleCtx(ctx, upd)
 		}()
 	} else {
-		_ = r.HandleCtx(context.Background(), upd)
+		_ = r.HandleCtx(ctx, upd)
 	}
 }
 

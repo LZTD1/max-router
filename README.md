@@ -25,7 +25,34 @@ Max Router делает разработку бота простой, чисто
 ## Простой пример использования
 
 ```go
-todo ...
+func main() {
+    ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, os.Interrupt)
+    defer stop()
+    
+    api, _ := maxbot.New(
+        os.Getenv("MAX_TOKEN"),
+    )
+    
+    // Инициализация роутера
+    r := maxrouter.NewRouter(api)
+    r.Use(middleware.Recover()) // Защита от паники
+    r.Use(middleware.DefaultLogger())
+    
+    // --- Регистрация хендлера на команду /start ---
+    r.HandleCommand("/start", func(ctx maxrouter.Context) error {
+        return ctx.Send("Привет!")
+    })
+    
+    // --- Обработка неизвестных команд (NotFound) ---
+    r.NotFound(func(c maxrouter.Context) error {
+        return c.Send("Извините, такую команду я еще не умею обрабатывать")
+    })
+    
+    // --- Start polling ---
+    for update := range api.GetUpdates(ctx) {
+        r.Handle(update, ctx)
+    }
+}
 ```
 ## Примеры
 
