@@ -67,5 +67,11 @@ func main() {
 - [Работа с регулярными выражениями](./_examples/regular-exp.go)
 - [Использование Middleware: Применение глобальных и Scoped Middleware](./_examples/middleware-usage.go)
 
+## История версий
+- **v1.1.1**: Добавлены примеры и миграция на новую версию maxbot, расширены тесты middleware
+- **v1.1.0**: Интеграция передачи контекста в обработчики запросов
+- **v1.0.1**: Оптимизация контекста (удален mutex)
+- **v1.0.0**: Релиз
+
 ## License
 Licensed under [MIT License](./LICENSE)
