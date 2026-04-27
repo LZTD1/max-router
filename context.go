@@ -3,7 +3,6 @@ package maxrouter
 import (
 	"context"
 	"errors"
-	"sync"
 
 	maxbot "github.com/max-messenger/max-bot-api-client-go"
 	"github.com/max-messenger/max-bot-api-client-go/schemes"
@@ -38,9 +37,7 @@ type maxContext struct {
 	api     *maxbot.Api
 	goCtx   context.Context
 	handled bool
-
-	mu    sync.RWMutex
-	store map[string]any
+	store   map[string]any
 }
 
 func newContext(goCtx context.Context, api *maxbot.Api, upd schemes.UpdateInterface) *maxContext {
@@ -57,17 +54,13 @@ func (c *maxContext) Ctx() context.Context            { return c.goCtx }
 func (c *maxContext) Handled() bool                   { return c.handled }
 
 func (c *maxContext) Set(key string, val any) {
-	c.mu.Lock()
 	if c.store == nil {
 		c.store = make(map[string]any)
 	}
 	c.store[key] = val
-	c.mu.Unlock()
 }
 
 func (c *maxContext) Get(key string) (any, bool) {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
 	if c.store == nil {
 		return nil, false
 	}
@@ -133,7 +126,7 @@ func (c *maxContext) Send(text string, opts ...Option) error {
 
 	msg := maxbot.NewMessage().SetChat(chatID).SetText(text)
 	if o.Keyboard != nil {
-		msg = msg.AddKeyboard(o.Keyboard) // *Важно: требует адаптации если Keyboard в SDK отличается
+		msg = msg.AddKeyboard(o.Keyboard)
 	}
 	if o.ReplyToID != "" {
 		msg = msg.SetReply(text, o.ReplyToID)
