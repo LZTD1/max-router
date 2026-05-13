@@ -40,7 +40,7 @@ func main() {
     
     // --- Регистрация хендлера на команду /start ---
     r.HandleCommand("/start", func(ctx maxrouter.Context) error {
-        return ctx.Send("Привет!")
+        return ctx.Send(fmt.Sprintf("Привет %s!", ctx.FullName()))
     })
     r.HandleText("Кто ты?", func(ctx maxrouter.Context) error {
         return ctx.Reply("Я бот!")
