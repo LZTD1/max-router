@@ -36,7 +36,7 @@ func main() {
 		)
 
 		return c.Send(
-			fmt.Sprintf("Привет!\n\nДобро пожаловать в бот."),
+			fmt.Sprintf("Привет %s!\n\nДобро пожаловать в бот.", c.FullName()),
 			maxrouter.WithKeyboard(kb),
 		)
 	})

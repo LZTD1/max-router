@@ -9,7 +9,7 @@
 ## Установка
 
 ```bash
-go get github.com/LZTD1/max-router@v1.1.1
+go get github.com/LZTD1/max-router@v1.2.0
 ```
 
 ## Возможности (Features)
@@ -68,6 +68,7 @@ func main() {
 - [Использование Middleware: Применение глобальных и Scoped Middleware](./_examples/middleware-usage.go)
 
 ## История версий
+- **v1.2.0**: Добавлены методы для работы с пользователем `User()`, `Username()`, `FullName()` и т.д.
 - **v1.1.1**: Добавлены примеры и миграция на новую версию maxbot, расширены тесты middleware
 - **v1.1.0**: Интеграция передачи контекста в обработчики запросов
 - **v1.0.1**: Оптимизация контекста (удален mutex)

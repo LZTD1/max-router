@@ -29,6 +29,12 @@ type Context interface {
 	Edit(text string, opts ...Option) error
 	Answer(notification string) error
 
+	User() *schemes.User
+	FullName() string
+	Username() string
+	FirstName() string
+	LastName() string
+
 	Handled() bool
 }
 
@@ -179,4 +185,53 @@ func (c *maxContext) Answer(notification string) error {
 	_, err := c.api.Messages.AnswerOnCallback(c.goCtx, cb.CallbackID,
 		&schemes.CallbackAnswer{Notification: notification})
 	return err
+}
+
+func (c *maxContext) User() *schemes.User {
+	switch u := c.update.(type) {
+	case *schemes.MessageCreatedUpdate:
+		return &u.Message.Sender
+	case *schemes.MessageEditedUpdate:
+		return &u.Message.Sender
+	case *schemes.MessageCallbackUpdate:
+		return &u.Callback.User
+	case *schemes.BotStartedUpdate:
+		return &u.User
+	case *schemes.UserAddedToChatUpdate:
+		return &u.User
+	case *schemes.ChatTitleChangedUpdate:
+		return &u.User
+	case *schemes.BotAddedToChatUpdate:
+		return &u.User
+	}
+
+	return nil
+}
+
+func (c *maxContext) FullName() string {
+	if user := c.User(); user != nil {
+		return user.Name
+	}
+	return ""
+}
+
+func (c *maxContext) Username() string {
+	if user := c.User(); user != nil {
+		return user.Username
+	}
+	return ""
+}
+
+func (c *maxContext) FirstName() string {
+	if user := c.User(); user != nil {
+		return user.FirstName
+	}
+	return ""
+}
+
+func (c *maxContext) LastName() string {
+	if user := c.User(); user != nil {
+		return user.LastName
+	}
+	return ""
 }
