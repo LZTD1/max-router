@@ -2,7 +2,7 @@
 
 ![max-router-funny-pic](https://i.imgur.com/IVlsf8E.png)
 
-Гибкий и мощный роутер для [Max Bot API Client@v1.6.15](https://github.com/max-messenger/max-bot-api-client-go), вдохновленный принципами `go-chi`.
+Гибкий и мощный роутер сообщений для мессенджера [Max Bot API Client@v1.6.15](https://github.com/max-messenger/max-bot-api-client-go), вдохновленный принципами `go-chi`.
 
 Роутер предоставляет удобный интерфейс для обработки сообщений, команд и callback-запросов, поддерживая middleware и группировку маршрутов.
 
