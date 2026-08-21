@@ -9,9 +9,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	maxrouter "github.com/LZTD1/max-router"
-	"github.com/LZTD1/max-router/middleware"
-	maxbot "github.com/max-messenger/max-bot-api-client-go"
+	maxrouter "github.com/LZTD1/max-router/v2"
+	"github.com/LZTD1/max-router/v2/middleware"
+	maxbot "github.com/max-messenger/max-bot-api-client-go/v2"
 )
 
 var ADMIN_IDS = map[int64]struct{}{
@@ -53,7 +53,11 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, os.Interrupt)
 	defer stop()
 
-	api, err := maxbot.New(os.Getenv("MAX_TOKEN"))
+	token := os.Getenv("MAX_TOKEN")
+	if token == "" {
+		log.Fatal("MAX_TOKEN не задан")
+	}
+	api, err := maxbot.NewApi(token)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -93,7 +97,19 @@ func main() {
 		return c.Send("Хмм... я не понимаю эту команду")
 	})
 
-	for update := range api.GetUpdates(ctx) {
-		r.Handle(update, ctx)
+	var marker int64
+	for {
+		updates, nextMarker, err := api.Subscriptions.GetUpdates(ctx, marker)
+		if err != nil {
+			if ctx.Err() != nil {
+				return
+			}
+			log.Printf("получение обновлений: %v", err)
+			continue
+		}
+		marker = nextMarker
+		for _, update := range updates {
+			r.Handle(update, ctx)
+		}
 	}
 }

@@ -2,14 +2,14 @@
 
 ![max-router-funny-pic](https://i.imgur.com/IVlsf8E.png)
 
-Гибкий и мощный роутер сообщений для мессенджера [Max Bot API Client@v1.6.15](https://github.com/max-messenger/max-bot-api-client-go), вдохновленный принципами `go-chi`.
+Гибкий и мощный роутер сообщений для [Max Bot API Client v2.2.6](https://github.com/max-messenger/max-bot-api-client-go/releases/tag/v2.2.6), вдохновленный принципами `go-chi`.
 
 Роутер предоставляет удобный интерфейс для обработки сообщений, команд и callback-запросов, поддерживая middleware и группировку маршрутов.
 
 ## Установка
 
 ```bash
-go get github.com/LZTD1/max-router@v1.2.0
+go get github.com/LZTD1/max-router/v2
 ```
 
 ## Возможности (Features)
@@ -29,9 +29,14 @@ func main() {
     ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, os.Interrupt)
     defer stop()
     
-    api, _ := maxbot.New(
-        os.Getenv("MAX_TOKEN"),
-    )
+    token := os.Getenv("MAX_TOKEN")
+    if token == "" {
+        log.Fatal("MAX_TOKEN не задан")
+    }
+    api, err := maxbot.NewApi(token)
+    if err != nil {
+        log.Fatal(err)
+    }
     
     // Инициализация роутера
     r := maxrouter.NewRouter(api)
@@ -52,12 +57,25 @@ func main() {
     })
     
     // --- Start polling ---
-    for update := range api.GetUpdates(ctx) {
-        r.Handle(update, ctx)
+    var marker int64
+    for {
+        updates, nextMarker, err := api.Subscriptions.GetUpdates(ctx, marker)
+        if err != nil {
+            if ctx.Err() != nil {
+                return
+            }
+            log.Printf("получение обновлений: %v", err)
+            continue
+        }
+        marker = nextMarker
+        for _, update := range updates {
+            r.Handle(update, ctx)
+        }
     }
 }
 ``` 
-Для корректной работы роутера рекомендуется использование встроенных в контекст методов `Send`, `Reply` и т.д. Использование std API внутри роутера может привести к некорректной работе.
+Для корректной работы внутри роутера рекомендуется использование встроенных в контекст методов `Send`, `Reply` и т.д. Использование std API внутри роутера может привести к некорректной работе.
+
 
 ## Примеры
 
@@ -68,6 +86,7 @@ func main() {
 - [Использование Middleware: Применение глобальных и Scoped Middleware](./_examples/middleware-usage.go)
 
 ## История версий
+- **v2.0.0**: Миграция на новую мажорную версию max sdk v2.2.6
 - **v1.2.0**: Добавлены методы для работы с пользователем `User()`, `Username()`, `FullName()` и т.д.
 - **v1.1.1**: Добавлены примеры и миграция на новую версию maxbot, расширены тесты middleware
 - **v1.1.0**: Интеграция передачи контекста в обработчики запросов

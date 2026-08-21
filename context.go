@@ -4,17 +4,17 @@ import (
 	"context"
 	"errors"
 
-	maxbot "github.com/max-messenger/max-bot-api-client-go"
-	"github.com/max-messenger/max-bot-api-client-go/schemes"
+	maxbot "github.com/max-messenger/max-bot-api-client-go/v2"
+	"github.com/max-messenger/max-bot-api-client-go/v2/model"
 )
 
 type Context interface {
-	Update() schemes.UpdateInterface
+	Update() model.Update
 	API() *maxbot.Api
 	Ctx() context.Context
 
-	Message() *schemes.Message
-	Callback() *schemes.Callback
+	Message() *model.MessageUpdate
+	Callback() *model.Callback
 	Text() string
 	Command() string
 	Data() string
@@ -29,7 +29,7 @@ type Context interface {
 	Edit(text string, opts ...Option) error
 	Answer(notification string) error
 
-	User() *schemes.User
+	User() *model.User
 	FullName() string
 	Username() string
 	FirstName() string
@@ -39,14 +39,14 @@ type Context interface {
 }
 
 type maxContext struct {
-	update  schemes.UpdateInterface
+	update  model.Update
 	api     *maxbot.Api
 	goCtx   context.Context
 	handled bool
 	store   map[string]any
 }
 
-func newContext(goCtx context.Context, api *maxbot.Api, upd schemes.UpdateInterface) *maxContext {
+func newContext(goCtx context.Context, api *maxbot.Api, upd model.Update) *maxContext {
 	return &maxContext{
 		update: upd,
 		api:    api,
@@ -54,10 +54,10 @@ func newContext(goCtx context.Context, api *maxbot.Api, upd schemes.UpdateInterf
 	}
 }
 
-func (c *maxContext) Update() schemes.UpdateInterface { return c.update }
-func (c *maxContext) API() *maxbot.Api                { return c.api }
-func (c *maxContext) Ctx() context.Context            { return c.goCtx }
-func (c *maxContext) Handled() bool                   { return c.handled }
+func (c *maxContext) Update() model.Update { return c.update }
+func (c *maxContext) API() *maxbot.Api     { return c.api }
+func (c *maxContext) Ctx() context.Context { return c.goCtx }
+func (c *maxContext) Handled() bool        { return c.handled }
 
 func (c *maxContext) Set(key string, val any) {
 	if c.store == nil {
@@ -74,26 +74,20 @@ func (c *maxContext) Get(key string) (any, bool) {
 	return val, ok
 }
 
-func (c *maxContext) Message() *schemes.Message {
-	switch u := c.update.(type) {
-	case *schemes.MessageCreatedUpdate:
-		return &u.Message
-	case *schemes.MessageEditedUpdate:
-		return &u.Message
-	case *schemes.MessageCallbackUpdate:
-		if u.Message != nil {
-			return u.Message
-		}
+func (c *maxContext) Message() *model.MessageUpdate {
+	message := c.update.Message
+	if message == nil {
+		return nil
 	}
-	return nil
+	// The v2 client creates an empty MessageUpdate for callbacks without an
+	// original message. Preserve the v1 router's "no message" behavior.
+	if c.update.UpdateType == model.UpdateMessageCallback && message.Body.Mid == "" {
+		return nil
+	}
+	return message
 }
 
-func (c *maxContext) Callback() *schemes.Callback {
-	if u, ok := c.update.(*schemes.MessageCallbackUpdate); ok {
-		return &u.Callback
-	}
-	return nil
-}
+func (c *maxContext) Callback() *model.Callback { return c.update.Callback }
 
 func (c *maxContext) Text() string {
 	if m := c.Message(); m != nil {
@@ -103,8 +97,8 @@ func (c *maxContext) Text() string {
 }
 
 func (c *maxContext) Command() string {
-	if u, ok := c.update.(*schemes.MessageCreatedUpdate); ok {
-		return u.GetCommand()
+	if c.update.UpdateType == model.UpdateMessageCreated {
+		return c.update.GetCommand().Command
 	}
 	return ""
 }
@@ -116,8 +110,14 @@ func (c *maxContext) Data() string {
 	return ""
 }
 
-func (c *maxContext) ChatID() int64 { return c.update.GetChatID() }
-func (c *maxContext) UserID() int64 { return c.update.GetUserID() }
+func (c *maxContext) ChatID() int64 { return c.update.ChatID }
+
+func (c *maxContext) UserID() int64 {
+	if callback := c.Callback(); callback != nil {
+		return callback.User.UserID
+	}
+	return c.update.UserID
+}
 
 func (c *maxContext) Send(text string, opts ...Option) error {
 	c.handled = true
@@ -137,13 +137,14 @@ func (c *maxContext) Send(text string, opts ...Option) error {
 	if o.ReplyToID != "" {
 		msg = msg.SetReply(text, o.ReplyToID)
 	}
-	if o.Notify {
-		msg = msg.SetNotify(true)
+	if o.Notify != nil && !*o.Notify {
+		msg = msg.WithoutNotify()
 	}
 	if o.Format != "" {
 		msg = msg.SetFormat(o.Format)
 	}
-	return c.api.Messages.Send(c.goCtx, msg)
+	_, err := c.api.Messages.Send(c.goCtx, msg)
+	return err
 }
 
 func (c *maxContext) Reply(text string, opts ...Option) error {
@@ -159,7 +160,7 @@ func (c *maxContext) Edit(text string, opts ...Option) error {
 		return ErrNilAPI
 	}
 	m := c.Message()
-	if m == nil {
+	if m == nil || m.Body.Mid == "" {
 		return errors.New("maxrouter: no message to edit")
 	}
 	o := buildOptions(opts)
@@ -170,7 +171,8 @@ func (c *maxContext) Edit(text string, opts ...Option) error {
 	if o.Format != "" {
 		req = req.SetFormat(o.Format)
 	}
-	return c.api.Messages.EditMessage(c.goCtx, m.Body.Mid, req)
+	_, err := c.api.Messages.EditMessage(c.goCtx, m.Body.Mid, req.MessageBody())
+	return err
 }
 
 func (c *maxContext) Answer(notification string) error {
@@ -183,28 +185,27 @@ func (c *maxContext) Answer(notification string) error {
 		return errors.New("maxrouter: no callback in update")
 	}
 	_, err := c.api.Messages.AnswerOnCallback(c.goCtx, cb.CallbackID,
-		&schemes.CallbackAnswer{Notification: notification})
+		model.CallbackAnswer{Notification: &notification})
 	return err
 }
 
-func (c *maxContext) User() *schemes.User {
-	switch u := c.update.(type) {
-	case *schemes.MessageCreatedUpdate:
-		return &u.Message.Sender
-	case *schemes.MessageEditedUpdate:
-		return &u.Message.Sender
-	case *schemes.MessageCallbackUpdate:
-		return &u.Callback.User
-	case *schemes.BotStartedUpdate:
-		return &u.User
-	case *schemes.UserAddedToChatUpdate:
-		return &u.User
-	case *schemes.ChatTitleChangedUpdate:
-		return &u.User
-	case *schemes.BotAddedToChatUpdate:
-		return &u.User
+func (c *maxContext) User() *model.User {
+	if callback := c.Callback(); callback != nil {
+		return &callback.User
 	}
-
+	if c.update.User != nil {
+		return c.update.User
+	}
+	if message := c.Message(); message != nil {
+		return &model.User{
+			UserID:    message.Sender.UserID,
+			FirstName: message.Sender.FirstName,
+			LastName:  message.Sender.LastName,
+			Username:  message.Sender.Username,
+			IsBot:     message.Sender.IsBot,
+			Name:      message.Sender.Name,
+		}
+	}
 	return nil
 }
 

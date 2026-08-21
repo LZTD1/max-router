@@ -2,8 +2,9 @@ package middleware
 
 import (
 	"fmt"
-	"github.com/LZTD1/max-router"
 	"log"
+
+	"github.com/LZTD1/max-router/v2"
 )
 
 func Recover() maxrouter.Middleware {

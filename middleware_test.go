@@ -3,13 +3,9 @@ package maxrouter
 import (
 	"context"
 	"testing"
-
-	"github.com/max-messenger/max-bot-api-client-go/schemes"
 )
 
-var startUpdate = &schemes.MessageCreatedUpdate{
-	Message: schemes.Message{Body: schemes.MessageBody{Text: "/start"}},
-}
+var startUpdate = messageUpdate("/start")
 
 func TestMiddlewareChain(t *testing.T) {
 	r := NewRouter(nil, WithAsync(false))
@@ -63,18 +59,14 @@ func TestGroupMiddleware(t *testing.T) {
 
 	r.HandleCommand("/outside", func(ctx Context) error { return nil })
 
-	_ = r.HandleCtx(context.Background(), &schemes.MessageCreatedUpdate{
-		Message: schemes.Message{Body: schemes.MessageBody{Text: "/inside"}},
-	})
+	_ = r.HandleCtx(context.Background(), messageUpdate("/inside"))
 
 	if !groupMwCalled {
 		t.Error("миддлварь группы должна была сработать для /inside")
 	}
 
 	groupMwCalled = false
-	_ = r.HandleCtx(context.Background(), &schemes.MessageCreatedUpdate{
-		Message: schemes.Message{Body: schemes.MessageBody{Text: "/outside"}},
-	})
+	_ = r.HandleCtx(context.Background(), messageUpdate("/outside"))
 
 	if groupMwCalled {
 		t.Error("миддлварь группы не должна срабатывать для /outside")
@@ -98,9 +90,7 @@ func TestNotFoundReceivesGlobalMiddleware(t *testing.T) {
 		return nil
 	})
 
-	_ = r.HandleCtx(context.Background(), &schemes.MessageCreatedUpdate{
-		Message: schemes.Message{Body: schemes.MessageBody{Text: "/nonexistent"}},
-	})
+	_ = r.HandleCtx(context.Background(), messageUpdate("/nonexistent"))
 
 	if !notFoundCalled {
 		t.Error("NotFound-хэндлер должен был вызваться")
@@ -126,17 +116,13 @@ func TestWithAppliesMiddlewareOnlyToRoute(t *testing.T) {
 
 	r.HandleCommand("/plain", func(ctx Context) error { return nil })
 
-	_ = r.HandleCtx(context.Background(), &schemes.MessageCreatedUpdate{
-		Message: schemes.Message{Body: schemes.MessageBody{Text: "/scoped"}},
-	})
+	_ = r.HandleCtx(context.Background(), messageUpdate("/scoped"))
 	if !withMwCalled {
 		t.Error("миддлварь With должна сработать для /scoped")
 	}
 
 	withMwCalled = false
-	_ = r.HandleCtx(context.Background(), &schemes.MessageCreatedUpdate{
-		Message: schemes.Message{Body: schemes.MessageBody{Text: "/plain"}},
-	})
+	_ = r.HandleCtx(context.Background(), messageUpdate("/plain"))
 	if withMwCalled {
 		t.Error("миддлварь With не должна срабатывать для /plain")
 	}
@@ -164,9 +150,7 @@ func TestWithPreservesGlobalMiddlewareOrder(t *testing.T) {
 		return nil
 	})
 
-	_ = r.HandleCtx(context.Background(), &schemes.MessageCreatedUpdate{
-		Message: schemes.Message{Body: schemes.MessageBody{Text: "/ordered"}},
-	})
+	_ = r.HandleCtx(context.Background(), messageUpdate("/ordered"))
 
 	want := []string{"global", "with", "handler"}
 	if len(log) != len(want) {
@@ -194,9 +178,7 @@ func TestWithDoesNotMutateRouter(t *testing.T) {
 	r.HandleCommand("/after-with", func(ctx Context) error { return nil })
 
 	withMwCalled = false
-	_ = r.HandleCtx(context.Background(), &schemes.MessageCreatedUpdate{
-		Message: schemes.Message{Body: schemes.MessageBody{Text: "/after-with"}},
-	})
+	_ = r.HandleCtx(context.Background(), messageUpdate("/after-with"))
 	if withMwCalled {
 		t.Error("миддлварь With не должна просочиться в маршруты, зарегистрированные после неё на оригинальном роутере")
 	}
@@ -230,9 +212,7 @@ func TestGroupsDoNotShareMiddlewareScope(t *testing.T) {
 	})
 
 	// Запрос к группе A — только миддлварь A должна сработать
-	_ = r.HandleCtx(context.Background(), &schemes.MessageCreatedUpdate{
-		Message: schemes.Message{Body: schemes.MessageBody{Text: "/group-a"}},
-	})
+	_ = r.HandleCtx(context.Background(), messageUpdate("/group-a"))
 	if !groupAMwCalled {
 		t.Error("миддлварь группы A должна сработать для /group-a")
 	}
@@ -242,9 +222,7 @@ func TestGroupsDoNotShareMiddlewareScope(t *testing.T) {
 
 	groupAMwCalled = false
 	groupBMwCalled = false
-	_ = r.HandleCtx(context.Background(), &schemes.MessageCreatedUpdate{
-		Message: schemes.Message{Body: schemes.MessageBody{Text: "/group-b"}},
-	})
+	_ = r.HandleCtx(context.Background(), messageUpdate("/group-b"))
 	if !groupBMwCalled {
 		t.Error("миддлварь группы B должна сработать для /group-b")
 	}
@@ -270,9 +248,7 @@ func TestGroupDoesNotLeakMiddlewareToParent(t *testing.T) {
 
 	r.HandleCommand("/root", func(ctx Context) error { return nil })
 
-	_ = r.HandleCtx(context.Background(), &schemes.MessageCreatedUpdate{
-		Message: schemes.Message{Body: schemes.MessageBody{Text: "/root"}},
-	})
+	_ = r.HandleCtx(context.Background(), messageUpdate("/root"))
 	if groupMwCalled {
 		t.Error("миддлварь группы не должна утекать в корневой роутер")
 	}
@@ -301,9 +277,7 @@ func TestGroupInheritsParentMiddleware(t *testing.T) {
 		sub.HandleCommand("/child", func(ctx Context) error { return nil })
 	})
 
-	_ = r.HandleCtx(context.Background(), &schemes.MessageCreatedUpdate{
-		Message: schemes.Message{Body: schemes.MessageBody{Text: "/child"}},
-	})
+	_ = r.HandleCtx(context.Background(), messageUpdate("/child"))
 
 	if !globalMwCalled {
 		t.Error("глобальная миддлварь родителя должна применяться к маршрутам группы")
@@ -351,9 +325,7 @@ func TestTwoGroupsWithSharedParentMiddleware(t *testing.T) {
 		})
 	})
 
-	_ = r.HandleCtx(context.Background(), &schemes.MessageCreatedUpdate{
-		Message: schemes.Message{Body: schemes.MessageBody{Text: "/a"}},
-	})
+	_ = r.HandleCtx(context.Background(), messageUpdate("/a"))
 	wantA := []string{"global", "group-a-mw", "handler-a"}
 	if len(log) != len(wantA) {
 		t.Fatalf("/a: ожидался порядок %v, получен %v", wantA, log)
@@ -365,9 +337,7 @@ func TestTwoGroupsWithSharedParentMiddleware(t *testing.T) {
 	}
 
 	log = nil
-	_ = r.HandleCtx(context.Background(), &schemes.MessageCreatedUpdate{
-		Message: schemes.Message{Body: schemes.MessageBody{Text: "/b"}},
-	})
+	_ = r.HandleCtx(context.Background(), messageUpdate("/b"))
 	wantB := []string{"global", "group-b-mw", "handler-b"}
 	if len(log) != len(wantB) {
 		t.Fatalf("/b: ожидался порядок %v, получен %v", wantB, log)

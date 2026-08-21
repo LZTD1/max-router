@@ -4,8 +4,8 @@ import (
 	"log"
 	"regexp"
 
-	maxbot "github.com/max-messenger/max-bot-api-client-go"
-	"github.com/max-messenger/max-bot-api-client-go/schemes"
+	maxbot "github.com/max-messenger/max-bot-api-client-go/v2"
+	"github.com/max-messenger/max-bot-api-client-go/v2/model"
 )
 
 type ErrorHandler func(err error, ctx Context)
@@ -38,7 +38,7 @@ func NewRouter(api *maxbot.Api, opts ...RouterOption) *Router {
 }
 
 func defaultErrorHandler(err error, ctx Context) {
-	log.Printf("[maxrouter] Handler error (Update: %s): %v", ctx.Update().GetUpdateType(), err)
+	log.Printf("[maxrouter] Handler error (Update: %s): %v", ctx.Update().UpdateType, err)
 }
 
 func (r *Router) OnError(eh ErrorHandler) {
@@ -108,10 +108,10 @@ func (r *Router) HandleRegexpCallback(re *regexp.Regexp, f HandlerFunc) {
 	r.store.regexCallbacks = append(r.store.regexCallbacks, regexEntry{re: re, h: r.wrap(f)})
 }
 
-func (r *Router) HandleType(t schemes.UpdateType, f HandlerFunc) {
+func (r *Router) HandleType(t model.UpdateType, f HandlerFunc) {
 	r.store.typedHandlers[t] = r.wrap(f)
 }
 
 func (r *Router) HandleStart(f HandlerFunc) {
-	r.HandleType(schemes.TypeBotStarted, f)
+	r.HandleType(model.UpdateBotStarted, f)
 }

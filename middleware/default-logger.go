@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"github.com/LZTD1/max-router"
+	"github.com/LZTD1/max-router/v2"
 	"log"
 	"time"
 )
@@ -12,12 +12,12 @@ func DefaultLogger() maxrouter.Middleware {
 			start := time.Now()
 
 			log.Printf("[maxrouter] Started %s | UserID: %d | ChatID: %d",
-				c.Update().GetUpdateType(), c.UserID(), c.ChatID())
+				c.Update().UpdateType, c.UserID(), c.ChatID())
 
 			err := next.ServeContext(c)
 
 			log.Printf("[maxrouter] Completed %s in %v | Error: %v",
-				c.Update().GetUpdateType(), time.Since(start), err)
+				c.Update().UpdateType, time.Since(start), err)
 
 			return err
 		})

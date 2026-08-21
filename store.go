@@ -3,7 +3,7 @@ package maxrouter
 import (
 	"regexp"
 
-	"github.com/max-messenger/max-bot-api-client-go/schemes"
+	"github.com/max-messenger/max-bot-api-client-go/v2/model"
 )
 
 type regexEntry struct {
@@ -19,7 +19,7 @@ type routeStore struct {
 	regexTexts     []regexEntry
 	regexCallbacks []regexEntry
 
-	typedHandlers map[schemes.UpdateType]RouteHandler
+	typedHandlers map[model.UpdateType]RouteHandler
 
 	notFound RouteHandler
 }
@@ -29,19 +29,19 @@ func newRouteStore() *routeStore {
 		exactCommands:  make(map[string]RouteHandler),
 		exactTexts:     make(map[string]RouteHandler),
 		exactCallbacks: make(map[string]RouteHandler),
-		typedHandlers:  make(map[schemes.UpdateType]RouteHandler),
+		typedHandlers:  make(map[model.UpdateType]RouteHandler),
 	}
 }
 
 func (s *routeStore) resolve(ctx *maxContext) RouteHandler {
-	switch u := ctx.update.(type) {
-	case *schemes.MessageCreatedUpdate:
-		if cmd := u.GetCommand(); cmd != "" && cmd != schemes.CommandUndefined {
+	switch ctx.update.UpdateType {
+	case model.UpdateMessageCreated:
+		if cmd := ctx.Command(); cmd != "" {
 			if h, ok := s.exactCommands[cmd]; ok {
 				return h
 			}
 		}
-		text := u.Message.Body.Text
+		text := ctx.Text()
 		if h, ok := s.exactTexts[text]; ok {
 			return h
 		}
@@ -51,8 +51,8 @@ func (s *routeStore) resolve(ctx *maxContext) RouteHandler {
 			}
 		}
 
-	case *schemes.MessageCallbackUpdate:
-		payload := u.Callback.Payload
+	case model.UpdateMessageCallback:
+		payload := ctx.Data()
 		if h, ok := s.exactCallbacks[payload]; ok {
 			return h
 		}
@@ -63,7 +63,7 @@ func (s *routeStore) resolve(ctx *maxContext) RouteHandler {
 		}
 	}
 
-	if h, ok := s.typedHandlers[ctx.update.GetUpdateType()]; ok {
+	if h, ok := s.typedHandlers[ctx.update.UpdateType]; ok {
 		return h
 	}
 

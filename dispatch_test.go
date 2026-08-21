@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/max-messenger/max-bot-api-client-go/schemes"
+	"github.com/max-messenger/max-bot-api-client-go/v2/model"
 )
 
 func TestExactMatch(t *testing.T) {
@@ -23,9 +23,7 @@ func TestExactMatch(t *testing.T) {
 		return nil
 	})
 
-	_ = r.HandleCtx(context.Background(), &schemes.MessageCreatedUpdate{
-		Message: schemes.Message{Body: schemes.MessageBody{Text: "/start"}},
-	})
+	_ = r.HandleCtx(context.Background(), messageUpdate("/start"))
 
 	if !startCalled {
 		t.Error("хэндлер /start должен был вызваться")
@@ -35,9 +33,7 @@ func TestExactMatch(t *testing.T) {
 	}
 
 	startCalled = false
-	_ = r.HandleCtx(context.Background(), &schemes.MessageCreatedUpdate{
-		Message: schemes.Message{Body: schemes.MessageBody{Text: "Привет"}},
-	})
+	_ = r.HandleCtx(context.Background(), messageUpdate("Привет"))
 
 	if !helloCalled {
 		t.Error("хэндлер 'Привет' должен был вызваться")
@@ -58,9 +54,7 @@ func TestRegexpMatch(t *testing.T) {
 		return nil
 	})
 
-	_ = r.HandleCtx(context.Background(), &schemes.MessageCreatedUpdate{
-		Message: schemes.Message{Body: schemes.MessageBody{Text: "/user_123"}},
-	})
+	_ = r.HandleCtx(context.Background(), messageUpdate("/user_123"))
 
 	matches := pattern.FindStringSubmatch(gotText)
 	if len(matches) < 2 {
@@ -86,9 +80,7 @@ func TestNotFound(t *testing.T) {
 		return nil
 	})
 
-	_ = r.HandleCtx(context.Background(), &schemes.MessageCreatedUpdate{
-		Message: schemes.Message{Body: schemes.MessageBody{Text: "/unknown"}},
-	})
+	_ = r.HandleCtx(context.Background(), messageUpdate("/unknown"))
 
 	if knownCalled {
 		t.Error("хэндлер /start не должен был вызваться")
@@ -115,8 +107,9 @@ func TestCallbackMatch(t *testing.T) {
 		return nil
 	})
 
-	_ = r.HandleCtx(context.Background(), &schemes.MessageCallbackUpdate{
-		Callback: schemes.Callback{Payload: "action:buy"},
+	_ = r.HandleCtx(context.Background(), model.Update{
+		UpdateType: model.UpdateMessageCallback,
+		Callback:   &model.Callback{Payload: "action:buy"},
 	})
 
 	if !buyCalled {
