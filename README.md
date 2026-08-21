@@ -57,25 +57,14 @@ func main() {
     })
     
     // --- Start polling ---
-    var marker int64
-    for {
-        updates, nextMarker, err := api.Subscriptions.GetUpdates(ctx, marker)
-        if err != nil {
-            if ctx.Err() != nil {
-                return
-            }
-            log.Printf("получение обновлений: %v", err)
-            continue
-        }
-        marker = nextMarker
-        for _, update := range updates {
-            r.Handle(update, ctx)
-        }
+    if err := r.RunPolling(ctx, maxrouter.WithPollingErrorHandler(func(err error) {
+        log.Printf("polling error: %v", err)
+    })); err != nil && !errors.Is(err, context.Canceled) {
+        log.Fatal(err)
     }
 }
 ``` 
 Для корректной работы внутри роутера рекомендуется использование встроенных в контекст методов `Send`, `Reply` и т.д. Использование std API внутри роутера может привести к некорректной работе.
-
 
 ## Примеры
 
@@ -86,6 +75,7 @@ func main() {
 - [Использование Middleware: Применение глобальных и Scoped Middleware](./_examples/middleware-usage.go)
 
 ## История версий
+- **v2.1.0**: Добавление обертки polling событий ( `RunPolling`, `WithPollingErrorHandler` )
 - **v2.0.0**: Миграция на новую мажорную версию max sdk v2.2.6
 - **v1.2.0**: Добавлены методы для работы с пользователем `User()`, `Username()`, `FullName()` и т.д.
 - **v1.1.1**: Добавлены примеры и миграция на новую версию maxbot, расширены тесты middleware

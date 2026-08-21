@@ -2,6 +2,7 @@ package _examples
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -65,19 +66,9 @@ func main() {
 	})
 
 	log.Println("Bot starting...")
-	var marker int64
-	for {
-		updates, nextMarker, err := api.Subscriptions.GetUpdates(ctx, marker)
-		if err != nil {
-			if ctx.Err() != nil {
-				return
-			}
-			log.Printf("получение обновлений: %v", err)
-			continue
-		}
-		marker = nextMarker
-		for _, update := range updates {
-			r.Handle(update, ctx)
-		}
+	if err := r.RunPolling(ctx, maxrouter.WithPollingErrorHandler(func(err error) {
+		log.Printf("polling error: %v", err)
+	})); err != nil && !errors.Is(err, context.Canceled) {
+		log.Fatal(err)
 	}
 }
